@@ -8,7 +8,7 @@ SOURCES = $(wildcard src/*.cpp)
 DEPS = $(wildcard src/*.h*)
 OBJ = $(SOURCES:.cpp=.o)
 
-fieldday: $(OBJ) $(DEPS)
+fieldday: $(OBJ)
 	$(CXX) $(FLAGS) -o $@ $^ $(LINK)
 
 .PHONY: clean
