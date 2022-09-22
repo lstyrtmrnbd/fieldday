@@ -10,8 +10,8 @@
 
 #include <GL/glew.h>
 
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <SFML/System.hpp>
 #include <SFML/Graphics.hpp>
@@ -19,7 +19,7 @@
 
 using namespace sf;
 using std::cout, std::string, std::vector;
-using glm::vec2, glm::vec3;
+using glm::vec2, glm::vec3, glm::mat4;
 
 const string VERTFILE = "src/simple.vert";
 const string FRAGFILE = "src/simple.frag";
@@ -41,6 +41,18 @@ vector<vec2> VTEXS = {{ 0.0f, 1.0f },
                       { 1.0f, 1.0f },
                       { 0.0f, 1.0f }};
 
+mat4 scale(vec3 scalars) {
+  return glm::scale(mat4(1.0f), scalars);
+}
+
+mat4 translate(vec3 transf) {
+  return glm::translate(mat4(1.0f), transf);
+}
+
+mat4 rotate(float angle, vec3 axis) {
+  return glm::rotate(mat4(1.0f), angle, axis);
+}
+
 int main() {
 
   ContextSettings settings(24, 0, 0, 4, 6); //depth, stencil, AA, major, minor
@@ -51,7 +63,7 @@ int main() {
   //GL prep
   glewInit();
 
-  glClearColor(0.3f,0.6f,0.5f,1.0f);
+  glClearColor(0.9f,0.7f,0.3f,1.0f);
   glEnable(GL_DEPTH_TEST);
   
   Texture gremlin;
@@ -60,43 +72,78 @@ int main() {
   }
 
   GLuint texHandle = gremlin.getNativeHandle();
-  
-  GLuint VAO, VBO;
-  glGenVertexArrays(1, &VAO);
-  glGenBuffers(1, &VBO);
-  
-  glBindVertexArray(VAO);
-  glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
   Shader shader;
 
   if (!shader.loadFromFile(VERTFILE, FRAGFILE)) {
-    std::cout << "Batch failed to load shader " << VERTFILE
+    std::cout << "Failed to load shader " << VERTFILE
               << ", " << FRAGFILE << std::endl;
   }
 
   GLuint shaderHandle = shader.getNativeHandle();
-
-  unsigned int posLength = 3, texcLength = 2;
-  unsigned long posOffset = 0;
-  unsigned long texcOffset = posLength * sizeof(GLfloat);
-  unsigned int stride = (posLength * sizeof(GLfloat)) + (texcLength * sizeof(GLfloat));
+  GLuint instanceVAO, billVBO, texcoordVBO, modelsVBO;
+  glGenVertexArrays(1, &instanceVAO);
+  
+  glGenBuffers(1, &billVBO);
+  glGenBuffers(1, &texcoordVBO);
+  glGenBuffers(1, &modelsVBO);
+  
+  glBindVertexArray(instanceVAO);
 
   GLint posLoc = glGetAttribLocation(shaderHandle, "position");
   glEnableVertexAttribArray(posLoc);
-  glVertexAttribPointer(posLoc, posLength, GLfloat, false, stride, (GLvoid*)posOffset);
+  glBindBuffer(GL_ARRAY_BUFFER, billVBO);///////
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * VERTS.size(), VERTS.data(), GL_STATIC_DRAW);
+  glVertexAttribPointer(posLoc, 3, GL_FLOAT, false, 0, (GLvoid*)0);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
 
-  GLint texcLoc = glGetAttribLocation(shaderHandle, "texCoords");
+  GLint texcLoc = glGetAttribLocation(shaderHandle, "texCoord");
   glEnableVertexAttribArray(texcLoc);
-  glVertexAttribPointer(texcLoc, texcLength, GLfloat, true, stride, (GLvoid*)texcOffset);
+  glBindBuffer(GL_ARRAY_BUFFER, texcoordVBO);///
+  glBufferData(GL_ARRAY_BUFFER, sizeof(*VTEXS.data()), VTEXS.data(), GL_STATIC_DRAW);
+  glVertexAttribPointer(texcLoc, 2, GL_FLOAT, true, 0, (GLvoid*)0);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
 
-  // clear bindings for cleanliness
-  // glBindBuffer(GL_ARRAY_BUFFER, 0);
-  // glBindVertexArray(0);
-  for(auto i; i < VERTS) {
-    
-  }
-  glBufferSubData(GL_ARRAY_BUFFER, offset, size, (GLvoid*)&VERTS[0]);
+  vector<mat4> models = {
+    scale({2.0,1.0,1.0}),
+    scale({1.0,2.0,1.0}),
+    scale({2.0,1.0,1.0}) * rotate(45, {0,1,0})
+  };
+  
+  size_t mat4Stride = sizeof(GLfloat) * 4 * 4;
+  
+  GLint modelsLoc = glGetAttribLocation(shaderHandle, "models");
+  glEnableVertexAttribArray(modelsLoc);
+  glEnableVertexAttribArray(modelsLoc + 1);
+  glEnableVertexAttribArray(modelsLoc + 2);
+  glEnableVertexAttribArray(modelsLoc + 3);
+
+  glBindBuffer(GL_ARRAY_BUFFER, modelsVBO);/////
+  glBufferData(GL_ARRAY_BUFFER, mat4Stride * models.size(), models.data(), GL_STATIC_DRAW);
+  
+  glVertexAttribPointer(modelsLoc + 0, 4, GL_FLOAT, false, mat4Stride, (GLvoid*)0);
+  glVertexAttribPointer(modelsLoc + 1, 4, GL_FLOAT, false, mat4Stride, (GLvoid*)(sizeof(GLfloat) * 4));
+  glVertexAttribPointer(modelsLoc + 2, 4, GL_FLOAT, false, mat4Stride, (GLvoid*)(sizeof(GLfloat) * 8));
+  glVertexAttribPointer(modelsLoc + 3, 4, GL_FLOAT, false, mat4Stride, (GLvoid*)(sizeof(GLfloat) * 12));
+
+  glVertexAttribDivisor(modelsLoc + 0, 1);
+  glVertexAttribDivisor(modelsLoc + 1, 1);
+  glVertexAttribDivisor(modelsLoc + 2, 1);
+  glVertexAttribDivisor(modelsLoc + 3, 1);
+
+  glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
+  
+  glBindVertexArray(0);
+
+
+  mat4 projection = glm::perspective(glm::radians(90.0f), 16.0f / 9.0f, 0.1f, 100.0f);
+  mat4 view = glm::lookAt(vec3{0.0f,0.0f,3.0f}, vec3{0.0f}, vec3{0.0f,1.0f,0.0f});
+  mat4 viewProjection = projection * view;
+  
+  GLuint viewProjectionLoc = glGetUniformLocation(shaderHandle, "viewProjection");
+
+  // example buffer update
+  //glBufferSubData(GL_ARRAY_BUFFER, offset, size, (GLvoid*)&VERTS[0]);
 
   
   while (window.isOpen()) {
@@ -112,9 +159,20 @@ int main() {
           (event.key.code == Keyboard::Escape || event.key.code == Keyboard::Q))
         window.close();
     }
+
     
-    window.clear();
-    // window.draw(sprite);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    Shader::bind(&shader);
+
+    glUniformMatrix4fv(viewProjectionLoc, 1, GL_FALSE, &viewProjection[0][0]);
+    
+    glBindVertexArray(instanceVAO);
+
+    // glDrawArrays(GL_TRIANGLES, 0, 6);
+    glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 3);
+    glBindVertexArray(0);
+    
     window.display();
   }
   
