@@ -1,9 +1,5 @@
 #version 330
 
-// I don't see how you can hate from outside of the club..
-
-// you can't even get in
-
 uniform mat4 viewProjection;
 
 in vec3 position;

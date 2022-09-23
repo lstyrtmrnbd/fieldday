@@ -11,7 +11,7 @@
 #include <GL/glew.h>
 
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform.hpp>
 
 #include <SFML/System.hpp>
 #include <SFML/Graphics.hpp>
@@ -20,6 +20,7 @@
 using namespace sf;
 using std::cout, std::string, std::vector;
 using glm::vec2, glm::vec3, glm::mat4;
+using glm::rotate, glm::scale, glm::translate;
 
 const string VERTFILE = "src/simple.vert";
 const string FRAGFILE = "src/simple.frag";
@@ -41,17 +42,6 @@ vector<vec2> VTEXS = {{ 0.0f, 1.0f },
                       { 1.0f, 1.0f },
                       { 0.0f, 1.0f }};
 
-mat4 scale(vec3 scalars) {
-  return glm::scale(mat4(1.0f), scalars);
-}
-
-mat4 translate(vec3 transf) {
-  return glm::translate(mat4(1.0f), transf);
-}
-
-mat4 rotate(float angle, vec3 axis) {
-  return glm::rotate(mat4(1.0f), angle, axis);
-}
 
 int main() {
 
@@ -105,9 +95,9 @@ int main() {
   glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
 
   vector<mat4> models = {
-    translate({0.0,1.0,0.0}),
-    scale({2.0,2.0,1.0}) * translate({0.0,0.0,-0.5}),
-    rotate(45, {0,1,0}) * translate({-0.5,0.0,0.0})
+    translate(vec3{0.0f, 1.0f, 0.0f}),
+    scale(vec3{2.0f, 2.0f, 1.0f}) * translate(vec3{0.0f, 0.0f, -0.5f}),
+    rotate(45.0f, vec3{0.0f, 1.0f, 0.0f}) * translate(vec3{-0.5f, 0.0f, 0.0f})
   };
   
   size_t mat4Stride = sizeof(GLfloat) * 4 * 4;
