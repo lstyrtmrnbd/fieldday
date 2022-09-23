@@ -12,15 +12,17 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include <SFML/System.hpp>
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
 
 using namespace sf;
-using std::cout, std::string, std::vector;
+using std::cout, std::endl, std::string, std::vector;
 using glm::vec2, glm::vec3, glm::mat4;
 using glm::rotate, glm::scale, glm::translate;
+using glm::radians;
 
 const string VERTFILE = "src/simple.vert";
 const string FRAGFILE = "src/simple.frag";
@@ -42,9 +44,20 @@ vector<vec2> VTEXS = {{ 0.0f, 1.0f },
                       { 1.0f, 1.0f },
                       { 0.0f, 1.0f }};
 
+mat4 newModel(vec3 position, vec2 size, float angle) {
+  return scale(vec3{size, 1.0f}) * rotate(radians(angle), vec3{0.0f, 0.0f, 1.0f}) * translate(position);
+}
+
+vector<mat4> models = {
+  scale(vec3{1.0f, 1.0f, 1.0f}),
+  newModel({0.0f,0.0f,0.5f},{0.6f,0.6f},33.0f),
+  rotate(radians(45.0f), vec3{0.0f, 0.0f, -1.0f})
+};
 
 int main() {
 
+  //cout << glm::to_string(models[0]) << endl;
+  
   ContextSettings settings(24, 0, 0, 4, 6); //depth, stencil, AA, major, minor
   RenderWindow window(VideoMode(1280, 720), "fieldday", Style::Default, settings);
   window.setVerticalSyncEnabled(true);
@@ -55,6 +68,9 @@ int main() {
 
   glClearColor(0.9f,0.7f,0.3f,1.0f);
   glEnable(GL_DEPTH_TEST);
+  glEnable(GL_CULL_FACE);
+  glCullFace(GL_BACK);
+  //glFrontFace(GL_CW); //cull front faces
   
   Texture gremlin;
   if (!gremlin.loadFromFile("gremlin.png")) {
@@ -81,24 +97,22 @@ int main() {
   glBindVertexArray(instanceVAO);
 
   GLint posLoc = glGetAttribLocation(shaderHandle, "position");
+  const int posDim = 3; //vec3
+  
   glEnableVertexAttribArray(posLoc);
   glBindBuffer(GL_ARRAY_BUFFER, billVBO);///////
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * VERTS.size(), VERTS.data(), GL_STATIC_DRAW);
-  glVertexAttribPointer(posLoc, 3, GL_FLOAT, false, 0, (GLvoid*)0);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * posDim * VERTS.size(), VERTS.data(), GL_STATIC_DRAW);
+  glVertexAttribPointer(posLoc, posDim, GL_FLOAT, false, 0, (GLvoid*)0);
   glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
 
   GLint texcLoc = glGetAttribLocation(shaderHandle, "texCoord");
+  const int texcDim = 2; //vec2
+  
   glEnableVertexAttribArray(texcLoc);
   glBindBuffer(GL_ARRAY_BUFFER, texcoordVBO);///
-  glBufferData(GL_ARRAY_BUFFER, sizeof(*VTEXS.data()), VTEXS.data(), GL_STATIC_DRAW);
-  glVertexAttribPointer(texcLoc, 2, GL_FLOAT, true, 0, (GLvoid*)0);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * texcDim * VTEXS.size(), VTEXS.data(), GL_STATIC_DRAW);
+  glVertexAttribPointer(texcLoc, texcDim, GL_FLOAT, true, 0, (GLvoid*)0);
   glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
-
-  vector<mat4> models = {
-    translate(vec3{0.0f, 1.0f, 0.0f}),
-    scale(vec3{2.0f, 2.0f, 1.0f}) * translate(vec3{0.0f, 0.0f, -0.5f}),
-    rotate(45.0f, vec3{0.0f, 1.0f, 0.0f}) * translate(vec3{-0.5f, 0.0f, 0.0f})
-  };
   
   size_t mat4Stride = sizeof(GLfloat) * 4 * 4;
   

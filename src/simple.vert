@@ -15,7 +15,7 @@ void main() {
   texCoordV = texCoord;
   instanceId = gl_InstanceID;
 
-  vec4 worldPos = vec4(position, 1.0) * model;
+  vec4 worldPos = model * vec4(position, 1.0);
 
-  gl_Position = worldPos * viewProjection;
+  gl_Position = viewProjection * worldPos;
 }
