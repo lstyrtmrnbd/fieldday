@@ -7,6 +7,7 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include <ctime>
 
 #include <GL/glew.h>
 
@@ -45,14 +46,34 @@ vector<vec2> VTEXS = {{ 0.0f, 1.0f },
                       { 0.0f, 1.0f }};
 
 mat4 newModel(vec3 position, vec2 size, float angle) {
-  return scale(vec3{size, 1.0f}) * rotate(radians(angle), vec3{0.0f, 0.0f, 1.0f}) * translate(position);
+  return translate(position) * rotate(radians(angle), vec3{0.0f, 0.0f, 1.0f}) * scale(vec3{size, 1.0f});
 }
 
 vector<mat4> models = {
-  scale(vec3{1.0f, 1.0f, 1.0f}),
-  newModel({0.0f,0.0f,0.5f},{0.6f,0.6f},33.0f),
+  newModel({-0.5f,-0.5f,0.5f},{0.6f,0.6f},45.0f),
+  newModel({0.0f,-0.5f,0.5f},{0.6f,0.6f},33.0f),
   rotate(radians(45.0f), vec3{0.0f, 0.0f, -1.0f})
 };
+
+vector<vector<int>> stage = {
+  {1,1,1,1,1},
+  {1,0,0,0,1},
+  {1,0,0,0,1},
+  {1,0,0,0,1},
+  {1,1,1,1,1}
+};
+
+void screenshot(const RenderWindow& window) {
+
+  const string filename = "screenshots/screenshot" + std::to_string((int)time(NULL)) + ".png";
+  
+  sf::Texture texture;
+  texture.create(window.getSize().x, window.getSize().y);
+  texture.update(window);
+  if (texture.copyToImage().saveToFile(filename)) {
+      std::cout << "screenshot saved to " << filename << std::endl;
+  }
+}
 
 int main() {
 
@@ -162,6 +183,10 @@ int main() {
       if (event.type == Event::KeyPressed &&
           (event.key.code == Keyboard::Escape || event.key.code == Keyboard::Q))
         window.close();
+
+      if(event.type == Event::KeyPressed &&
+         (event.key.control && event.key.code == Keyboard::P))
+        screenshot(window);
     }
 
     
@@ -174,7 +199,7 @@ int main() {
     glBindVertexArray(instanceVAO);
 
     // glDrawArrays(GL_TRIANGLES, 0, 6);
-    glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 3);
+    glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 1);
     glBindVertexArray(0);
     
     window.display();
