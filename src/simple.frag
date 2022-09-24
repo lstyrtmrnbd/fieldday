@@ -3,7 +3,7 @@
 uniform int multiplicationFactor = 8;
 uniform float threshold = 0.133;
 
-uniform usampler2DArray texs;
+uniform sampler2DArray texs;
 
 in vec2 texCoordV;
 flat in int instanceId;
@@ -24,7 +24,7 @@ void main() {
   // else
   //   discard;
 
-  // fragColor = vec4(0.0, texCoordV.t, texCoordV.s, 1.0);
+  // fragColor = vec4(0.3 * texIndexV, texCoordV.t, texCoordV.s, 1.0);
 
   fragColor = texture(texs, vec3(texCoordV, texIndexV));
 }

@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <ctime>
+#include <cstdio>
 
 #include <GL/glew.h>
 
@@ -93,13 +94,28 @@ GLuint fillTextures(const vector<Image>& images) {
     const auto& image = images[i];
     const auto size = image.getSize();
     
-    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA, size.x, size.y, i, 0, GL_RGBA8, GL_UNSIGNED_BYTE, (GLvoid*)image.getPixelsPtr());
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA, size.x, size.y, i, 0, GL_RGBA,  GL_UNSIGNED_BYTE, (GLvoid*)image.getPixelsPtr());
   }
 
   // glBindTexture(GL_TEXTURE_2D_ARRAY, 0); //cleanup?
   
   return texture;
 }
+
+// from OpenGL wiki
+void GLAPIENTRY debugCallback( GLenum source,
+                               GLenum type,
+                               GLuint id,
+                               GLenum severity,
+                               GLsizei length,
+                               const GLchar* message,
+                               const void* userParam ) {
+  
+  fprintf( stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+           ( type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "" ),
+            type, severity, message );
+}
+
 
 int main() {
 
@@ -110,15 +126,23 @@ int main() {
   window.setVerticalSyncEnabled(true);
   window.setActive(true);
   
-  //GL prep
+  // GL Initialization
   glewInit();
 
+  glEnable(GL_DEBUG_OUTPUT);
+  glDebugMessageCallback(debugCallback, 0);
+  
   glClearColor(0.9f,0.7f,0.3f,1.0f);
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
   //glFrontFace(GL_CW); //cull front faces
 
+  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+  
   vector<Image> images(12, Image());
 
   for(auto i = 0; i < 12; i++) {
@@ -127,11 +151,6 @@ int main() {
   
   GLuint texture = fillTextures(images);
 
-  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
-  
   Shader shader;
 
   if (!shader.loadFromFile(VERTFILE, FRAGFILE)) {
@@ -171,7 +190,7 @@ int main() {
   GLint texIdxLoc = glGetAttribLocation(shaderHandle, "texIndex");
 
   glEnableVertexAttribArray(texIdxLoc);
-  glBindBuffer(GL_ARRAY_BUFFER, texIdxVBO);///
+  glBindBuffer(GL_ARRAY_BUFFER, texIdxVBO);/////
   glBufferData(GL_ARRAY_BUFFER, sizeof(GLint) * texIdxs.size(), texIdxs.data(), GL_STATIC_DRAW);
   glVertexAttribPointer(texIdxLoc, 1, GL_INT, false, 0, (GLvoid*)0);
   glVertexAttribDivisor(texIdxLoc, 1);
@@ -211,6 +230,8 @@ int main() {
 
   GLint texsLoc = glGetUniformLocation(shaderHandle, "texs");
 
+
+  cout << "Shader handle: " + std::to_string(shaderHandle) << endl;
   
   while (window.isOpen()) {
     
@@ -233,20 +254,23 @@ int main() {
     
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    Shader::bind(&shader);
-
+    //Shader::bind(&shader); // does texture binding internally
+    glUseProgram(shaderHandle);
+    
     glUniform1i(texsLoc, 0); // 0 = GL_TEXTURE0
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, texture);
-
     glUniformMatrix4fv(viewProjectionLoc, 1, GL_FALSE, &viewProjection[0][0]);
+
+    
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, texture); // redundant?
 
     glBindVertexArray(instanceVAO);
 
     // glDrawArrays(GL_TRIANGLES, 0, 6);
-    glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 1);
+    glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 3);
     glBindVertexArray(0);
+
+    glUseProgram(0);
     
     window.display();
   }
