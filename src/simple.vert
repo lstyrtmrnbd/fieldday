@@ -4,10 +4,12 @@ uniform mat4 viewProjection;
 
 in vec3 position;
 in vec2 texCoord;
-out vec2 texCoordV;
+in int texIndex;
 
 in mat4 model;
 
+out vec2 texCoordV;
+flat out int texIndexV;
 flat out int instanceId;
 
 void main() {

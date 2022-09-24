@@ -55,6 +55,8 @@ vector<mat4> models = {
   rotate(radians(45.0f), vec3{0.0f, 0.0f, -1.0f})
 };
 
+vector<int> texIdxs = {0,1,2};
+
 vector<vector<int>> stage = {
   {1,1,1,1,1},
   {1,0,0,0,1},
@@ -66,13 +68,37 @@ vector<vector<int>> stage = {
 void screenshot(const RenderWindow& window) {
 
   const string filename = "screenshots/screenshot" + std::to_string((int)time(NULL)) + ".png";
+
+  const auto size = window.getSize();
   
-  sf::Texture texture;
-  texture.create(window.getSize().x, window.getSize().y);
+  Texture texture;
+  texture.create(size.x, size.y);
   texture.update(window);
   if (texture.copyToImage().saveToFile(filename)) {
-      std::cout << "screenshot saved to " << filename << std::endl;
+    std::cout << "screenshot saved to " << filename << std::endl;
+  } else {
+    std::cout << "screenshot FAILED to save to " << filename << std::endl;
   }
+}
+
+GLuint fillTextures(const vector<Image>& images) {
+
+  GLuint texture;
+
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, texture);
+  
+  for(auto i = 0; i < images.size(); i++) {
+
+    const auto& image = images[i];
+    const auto size = image.getSize();
+    
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA, size.x, size.y, i, 0, GL_RGBA8, GL_UNSIGNED_BYTE, (GLvoid*)image.getPixelsPtr());
+  }
+
+  // glBindTexture(GL_TEXTURE_2D_ARRAY, 0); //cleanup?
+  
+  return texture;
 }
 
 int main() {
@@ -92,14 +118,20 @@ int main() {
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
   //glFrontFace(GL_CW); //cull front faces
-  
-  Texture gremlin;
-  if (!gremlin.loadFromFile("gremlin.png")) {
-    cout << "Failed to load gremlin.png...\n";
+
+  vector<Image> images(12, Image());
+
+  for(auto i = 0; i < 12; i++) {
+    images[i].loadFromFile("assets/" + std::to_string(i) + ".png");
   }
+  
+  GLuint texture = fillTextures(images);
 
-  GLuint texHandle = gremlin.getNativeHandle();
-
+  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+  
   Shader shader;
 
   if (!shader.loadFromFile(VERTFILE, FRAGFILE)) {
@@ -108,12 +140,13 @@ int main() {
   }
 
   GLuint shaderHandle = shader.getNativeHandle();
-  GLuint instanceVAO, billVBO, texcoordVBO, modelsVBO;
+  GLuint instanceVAO, billVBO, texcoordVBO, modelsVBO, texIdxVBO;
   glGenVertexArrays(1, &instanceVAO);
   
   glGenBuffers(1, &billVBO);
   glGenBuffers(1, &texcoordVBO);
   glGenBuffers(1, &modelsVBO);
+  glGenBuffers(1, &texIdxVBO);
   
   glBindVertexArray(instanceVAO);
 
@@ -133,6 +166,15 @@ int main() {
   glBindBuffer(GL_ARRAY_BUFFER, texcoordVBO);///
   glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * texcDim * VTEXS.size(), VTEXS.data(), GL_STATIC_DRAW);
   glVertexAttribPointer(texcLoc, texcDim, GL_FLOAT, true, 0, (GLvoid*)0);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
+
+  GLint texIdxLoc = glGetAttribLocation(shaderHandle, "texIndex");
+
+  glEnableVertexAttribArray(texIdxLoc);
+  glBindBuffer(GL_ARRAY_BUFFER, texIdxVBO);///
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLint) * texIdxs.size(), texIdxs.data(), GL_STATIC_DRAW);
+  glVertexAttribPointer(texIdxLoc, 1, GL_INT, false, 0, (GLvoid*)0);
+  glVertexAttribDivisor(texIdxLoc, 1);
   glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
   
   size_t mat4Stride = sizeof(GLfloat) * 4 * 4;
@@ -167,8 +209,7 @@ int main() {
   
   GLuint viewProjectionLoc = glGetUniformLocation(shaderHandle, "viewProjection");
 
-  // example buffer update
-  //glBufferSubData(GL_ARRAY_BUFFER, offset, size, (GLvoid*)&VERTS[0]);
+  GLint texsLoc = glGetUniformLocation(shaderHandle, "texs");
 
   
   while (window.isOpen()) {
@@ -194,8 +235,13 @@ int main() {
 
     Shader::bind(&shader);
 
+    glUniform1i(texsLoc, 0); // 0 = GL_TEXTURE0
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, texture);
+
     glUniformMatrix4fv(viewProjectionLoc, 1, GL_FALSE, &viewProjection[0][0]);
-    
+
     glBindVertexArray(instanceVAO);
 
     // glDrawArrays(GL_TRIANGLES, 0, 6);
