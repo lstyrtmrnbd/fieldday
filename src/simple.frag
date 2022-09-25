@@ -13,8 +13,6 @@ out vec4 fragColor;
 
 void main() {
 
-  float r = 0.3 * instanceId;
-
   // // multiplicationFactor scales the number of stripes
   // vec2 t = texCoordV * multiplicationFactor;
 
@@ -25,6 +23,7 @@ void main() {
   //   discard;
 
   // fragColor = vec4(0.3 * texIndexV, texCoordV.t, texCoordV.s, 1.0);
-
-  fragColor = texture(texs, vec3(texCoordV, texIndexV));
+  vec4 texColor = texture(texs, vec3(texCoordV, texIndexV));
+  fragColor = texColor;
+  // fragColor = vec4(0.3 * texIndexV, texCoordV, 1.0);
 }

@@ -175,12 +175,12 @@ int main() {
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
-  //glFrontFace(GL_CW); //cull front faces
-
-  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+  //glFrontFace(GL_CW);
+  
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
   /** // not really necessary
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -278,7 +278,7 @@ int main() {
   glEnableVertexAttribArray(posLoc);
   glBindBuffer(GL_ARRAY_BUFFER, billVBO);///////
   glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * posDim * VERTS.size(), VERTS.data(), GL_STATIC_DRAW);
-  glVertexAttribPointer(posLoc, posDim, GL_FLOAT, false, 0, (GLvoid*)0);
+  glVertexAttribPointer(posLoc, posDim, GL_FLOAT, false, 0, NULL);
   glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
 
   GLint texcLoc = glGetAttribLocation(shader, "texCoord");
@@ -287,15 +287,15 @@ int main() {
   glEnableVertexAttribArray(texcLoc);
   glBindBuffer(GL_ARRAY_BUFFER, texcoordVBO);///
   glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * texcDim * VTEXS.size(), VTEXS.data(), GL_STATIC_DRAW);
-  glVertexAttribPointer(texcLoc, texcDim, GL_FLOAT, true, 0, (GLvoid*)0);
+  glVertexAttribPointer(texcLoc, texcDim, GL_FLOAT, false, 0, NULL);
   glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
 
   GLint texIdxLoc = glGetAttribLocation(shader, "texIndex");
-
+  
   glEnableVertexAttribArray(texIdxLoc);
   glBindBuffer(GL_ARRAY_BUFFER, texIdxVBO);/////
   glBufferData(GL_ARRAY_BUFFER, sizeof(GLint) * texIdxs.size(), texIdxs.data(), GL_STATIC_DRAW);
-  glVertexAttribPointer(texIdxLoc, 1, GL_INT, false, 0, (GLvoid*)0);
+  glVertexAttribIPointer(texIdxLoc, 1, GL_INT, 0, NULL);
   glVertexAttribDivisor(texIdxLoc, 1);
   glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
   
@@ -330,7 +330,6 @@ int main() {
   mat4 viewProjection = projection * view;
   
   GLuint viewProjectionLoc = glGetUniformLocation(shader, "viewProjection");
-
   GLint texsLoc = glGetUniformLocation(shader, "texs");
 
   cout << "Shader handle: " + to_string(shader) << endl;
@@ -357,13 +356,12 @@ int main() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(shader);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, texture); // redundant?
     
     glUniform1i(texsLoc, 0); // 0 = GL_TEXTURE0
     glUniformMatrix4fv(viewProjectionLoc, 1, GL_FALSE, &viewProjection[0][0]);
-
-    
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, texture); // redundant?
 
     glBindVertexArray(instanceVAO);
 
