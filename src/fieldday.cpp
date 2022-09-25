@@ -4,6 +4,8 @@
  */
 
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <functional>
 #include <numeric>
 #include <string>
@@ -23,6 +25,7 @@
 
 using namespace sf;
 using std::cout, std::endl, std::string, std::vector;
+using std::ifstream, std::stringstream;
 using std::to_string, std::transform_reduce;
 using glm::vec2, glm::vec3, glm::mat4;
 using glm::rotate, glm::scale, glm::translate;
@@ -58,7 +61,7 @@ vector<mat4> models = {
   rotate(radians(45.0f), vec3{0.0f, 0.0f, -1.0f})
 };
 
-vector<int> texIdxs = {0,1,2};
+vector<int> texIdxs = {0,1,2,3,4,5,6,7,8,9,10,11};
 
 vector<vector<int>> stage = {
   {1,1,1,1,1},
@@ -108,24 +111,26 @@ GLuint fillTextures(const vector<Image>& images) {
 
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D_ARRAY, texture);
+
+  const int layerCount = images.size();
   
-  for(auto i = 0; i < images.size(); i++) {
-    
-    // Allocate storage of max size per level
-    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA, greatestWidth, greatestHeight, i, 0, GL_RGBA,  GL_UNSIGNED_BYTE, NULL);
-    
+  // Allocate storage of max size
+  glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA, greatestWidth, greatestHeight, layerCount, 0, GL_RGBA,  GL_UNSIGNED_BYTE, NULL);
+      
+  for(auto i = 0; i < layerCount; i++) {
+
     const auto& image = images[i];
     const auto size = image.getSize();
 
     const unsigned int xoff = greatestWidth - size.x;
     const unsigned int yoff = greatestHeight - size.y;
 
-    cout << "uploading tex at offset " + to_string(xoff) + ", " + to_string(yoff)
-         << ", " + to_string(i) << endl;
+    cout << "uploading tex of size (" + to_string(size.x) + ", " + to_string(size.y) + ")"
+         << " at offset (" + to_string(xoff) + ", " + to_string(yoff) + ")"
+         << " to level " + to_string(i) << endl;
     
     // Upload texture to the center of its level
-    glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, xoff, yoff, 0, size.x, size.y, i, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)image.getPixelsPtr());
-    
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, xoff, yoff, i, size.x, size.y, 1, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)image.getPixelsPtr());
   }
 
   // glBindTexture(GL_TEXTURE_2D_ARRAY, 0); //cleanup?
@@ -135,7 +140,7 @@ GLuint fillTextures(const vector<Image>& images) {
   return texture;
 }
 
-// from OpenGL wiki
+// from OpenGL wiki at khronos.org
 void GLAPIENTRY debugCallback( GLenum source,
                                GLenum type,
                                GLuint id,
@@ -149,12 +154,11 @@ void GLAPIENTRY debugCallback( GLenum source,
             type, severity, message );
 }
 
-
 int main() {
 
   //cout << glm::to_string(models[0]) << endl;
   
-  ContextSettings settings(24, 0, 0, 4, 6); //depth, stencil, AA, major, minor
+  ContextSettings settings(24, 0, 0, 4, 6, ContextSettings::Attribute::Core); //depth, stencil, AA, major, minor, profile
   RenderWindow window(VideoMode(1280, 720), "fieldday", Style::Default, settings);
   window.setVerticalSyncEnabled(true);
   window.setActive(true);
@@ -164,6 +168,8 @@ int main() {
 
   glEnable(GL_DEBUG_OUTPUT);
   glDebugMessageCallback(debugCallback, 0);
+
+  cout << glGetString(GL_VERSION) << endl;
   
   glClearColor(0.9f,0.7f,0.3f,1.0f);
   glEnable(GL_DEPTH_TEST);
@@ -176,10 +182,12 @@ int main() {
   glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
 
+  /** // not really necessary
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
   glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
   glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
   glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+  */
   
   vector<Image> images(12, Image());
 
@@ -189,14 +197,71 @@ int main() {
   
   GLuint texture = fillTextures(images);
 
-  Shader shader;
+  ifstream vFile;
+  stringstream vStream;
 
-  if (!shader.loadFromFile(VERTFILE, FRAGFILE)) {
-    std::cout << "Failed to load shader " << VERTFILE
-              << ", " << FRAGFILE << std::endl;
+  vFile.open(VERTFILE);
+  vStream << vFile.rdbuf();
+  vFile.close();
+
+  string vertexCode = vStream.str();
+  const char* vShaderCode = vertexCode.c_str();
+
+  ifstream fFile;
+  stringstream fStream;
+
+  fFile.open(FRAGFILE);
+  fStream << fFile.rdbuf();
+  fFile.close();
+
+  string fragCode = fStream.str();
+  const char* fShaderCode = fragCode.c_str();
+  
+  GLuint vertex, fragment;
+  int success;
+  char infoLog[512];
+   
+  // vertex Shader
+  vertex = glCreateShader(GL_VERTEX_SHADER);
+  glShaderSource(vertex, 1, &vShaderCode, NULL);
+  glCompileShader(vertex);
+  glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
+  
+  if(!success) {
+    glGetShaderInfoLog(vertex, 512, NULL, infoLog);
+    cout << "ERROR: Vertex shader compilation failed\n" << infoLog << endl;
   }
 
-  GLuint shaderHandle = shader.getNativeHandle();
+  // fragment Shader
+  fragment = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(fragment, 1, &fShaderCode, NULL);
+  glCompileShader(fragment);
+  glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
+  
+  if(!success) {
+    glGetShaderInfoLog(fragment, 512, NULL, infoLog);
+    cout << "ERROR: Fragment shader compilation failed\n" << infoLog << endl;
+  }
+
+  // shader Program
+  GLuint shader = glCreateProgram();
+  glAttachShader(shader, vertex);
+  glAttachShader(shader, fragment);
+  glLinkProgram(shader);
+  glGetProgramiv(shader, GL_LINK_STATUS, &success);
+  
+  if(!success) {
+    glGetProgramInfoLog(shader, 512, NULL, infoLog);
+    cout << "ERROR: Shader linking failed\n" << infoLog << endl;
+  }
+
+  // cleanup
+  glDeleteShader(vertex);
+  glDeleteShader(fragment);
+
+  glUseProgram(shader);
+
+
   GLuint instanceVAO, billVBO, texcoordVBO, modelsVBO, texIdxVBO;
   glGenVertexArrays(1, &instanceVAO);
   
@@ -207,7 +272,7 @@ int main() {
   
   glBindVertexArray(instanceVAO);
 
-  GLint posLoc = glGetAttribLocation(shaderHandle, "position");
+  GLint posLoc = glGetAttribLocation(shader, "position");
   const int posDim = 3; //vec3
   
   glEnableVertexAttribArray(posLoc);
@@ -216,7 +281,7 @@ int main() {
   glVertexAttribPointer(posLoc, posDim, GL_FLOAT, false, 0, (GLvoid*)0);
   glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
 
-  GLint texcLoc = glGetAttribLocation(shaderHandle, "texCoord");
+  GLint texcLoc = glGetAttribLocation(shader, "texCoord");
   const int texcDim = 2; //vec2
   
   glEnableVertexAttribArray(texcLoc);
@@ -225,7 +290,7 @@ int main() {
   glVertexAttribPointer(texcLoc, texcDim, GL_FLOAT, true, 0, (GLvoid*)0);
   glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
 
-  GLint texIdxLoc = glGetAttribLocation(shaderHandle, "texIndex");
+  GLint texIdxLoc = glGetAttribLocation(shader, "texIndex");
 
   glEnableVertexAttribArray(texIdxLoc);
   glBindBuffer(GL_ARRAY_BUFFER, texIdxVBO);/////
@@ -236,7 +301,7 @@ int main() {
   
   size_t mat4Stride = sizeof(GLfloat) * 4 * 4;
   
-  GLint modelsLoc = glGetAttribLocation(shaderHandle, "model");
+  GLint modelsLoc = glGetAttribLocation(shader, "model");
   glEnableVertexAttribArray(modelsLoc);
   glEnableVertexAttribArray(modelsLoc + 1);
   glEnableVertexAttribArray(modelsLoc + 2);
@@ -264,12 +329,11 @@ int main() {
   mat4 view = glm::lookAt(vec3{0.0f,0.0f,3.0f}, vec3{0.0f}, vec3{0.0f,1.0f,0.0f});
   mat4 viewProjection = projection * view;
   
-  GLuint viewProjectionLoc = glGetUniformLocation(shaderHandle, "viewProjection");
+  GLuint viewProjectionLoc = glGetUniformLocation(shader, "viewProjection");
 
-  GLint texsLoc = glGetUniformLocation(shaderHandle, "texs");
+  GLint texsLoc = glGetUniformLocation(shader, "texs");
 
-
-  cout << "Shader handle: " + to_string(shaderHandle) << endl;
+  cout << "Shader handle: " + to_string(shader) << endl;
   
   while (window.isOpen()) {
     
@@ -292,8 +356,7 @@ int main() {
     
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    //Shader::bind(&shader); // does texture binding internally
-    glUseProgram(shaderHandle);
+    glUseProgram(shader);
     
     glUniform1i(texsLoc, 0); // 0 = GL_TEXTURE0
     glUniformMatrix4fv(viewProjectionLoc, 1, GL_FALSE, &viewProjection[0][0]);
