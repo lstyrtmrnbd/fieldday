@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <functional>
+#include <numeric>
 #include <string>
 #include <vector>
 #include <ctime>
@@ -22,6 +23,7 @@
 
 using namespace sf;
 using std::cout, std::endl, std::string, std::vector;
+using std::to_string, std::transform_reduce;
 using glm::vec2, glm::vec3, glm::mat4;
 using glm::rotate, glm::scale, glm::translate;
 using glm::radians;
@@ -68,7 +70,7 @@ vector<vector<int>> stage = {
 
 void screenshot(const RenderWindow& window) {
 
-  const string filename = "screenshots/screenshot" + std::to_string((int)time(NULL)) + ".png";
+  const string filename = "screenshots/screenshot" + to_string((int)time(NULL)) + ".png";
 
   const auto size = window.getSize();
   
@@ -82,22 +84,53 @@ void screenshot(const RenderWindow& window) {
   }
 }
 
+auto getWidth = [](const Image& in) -> unsigned int {
+  return in.getSize().x;
+ };
+
+auto getHeight = [](const Image& in) -> unsigned int {
+  return in.getSize().y;
+ };
+
+auto greatest = [](unsigned int first, unsigned int second) -> unsigned int {
+  return first > second ? first : second;
+ };
+
 GLuint fillTextures(const vector<Image>& images) {
 
+  const unsigned int greatestHeight = transform_reduce(images.begin(), images.end(), 0, greatest, getHeight);
+  const unsigned int greatestWidth = transform_reduce(images.begin(), images.end(), 0, greatest, getWidth);
+
+  cout << "Greatest height: " + to_string(greatestHeight) << endl;
+  cout << "Greatest width: " + to_string(greatestWidth) << endl;
+  
   GLuint texture;
 
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D_ARRAY, texture);
   
   for(auto i = 0; i < images.size(); i++) {
-
+    
+    // Allocate storage of max size per level
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA, greatestWidth, greatestHeight, i, 0, GL_RGBA,  GL_UNSIGNED_BYTE, NULL);
+    
     const auto& image = images[i];
     const auto size = image.getSize();
+
+    const unsigned int xoff = greatestWidth - size.x;
+    const unsigned int yoff = greatestHeight - size.y;
+
+    cout << "uploading tex at offset " + to_string(xoff) + ", " + to_string(yoff)
+         << ", " + to_string(i) << endl;
     
-    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA, size.x, size.y, i, 0, GL_RGBA,  GL_UNSIGNED_BYTE, (GLvoid*)image.getPixelsPtr());
+    // Upload texture to the center of its level
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, xoff, yoff, 0, size.x, size.y, i, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)image.getPixelsPtr());
+    
   }
 
   // glBindTexture(GL_TEXTURE_2D_ARRAY, 0); //cleanup?
+
+  cout << "Succesfully uploaded textures to target " + to_string(texture) << endl;
   
   return texture;
 }
@@ -142,11 +175,16 @@ int main() {
   glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+  glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+  glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
   
   vector<Image> images(12, Image());
 
   for(auto i = 0; i < 12; i++) {
-    images[i].loadFromFile("assets/" + std::to_string(i) + ".png");
+    images[i].loadFromFile("assets/" + to_string(i) + ".png");
   }
   
   GLuint texture = fillTextures(images);
@@ -231,7 +269,7 @@ int main() {
   GLint texsLoc = glGetUniformLocation(shaderHandle, "texs");
 
 
-  cout << "Shader handle: " + std::to_string(shaderHandle) << endl;
+  cout << "Shader handle: " + to_string(shaderHandle) << endl;
   
   while (window.isOpen()) {
     
