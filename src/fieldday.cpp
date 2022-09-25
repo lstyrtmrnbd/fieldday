@@ -55,10 +55,11 @@ mat4 newModel(vec3 position, vec2 size, float angle) {
   return translate(position) * rotate(radians(angle), vec3{0.0f, 0.0f, 1.0f}) * scale(vec3{size, 1.0f});
 }
 
+// must sort NEAREST to FARTHEST
 vector<mat4> models = {
+  rotate(radians(45.0f), vec3{0.0f, 0.0f, -1.0f}),
   newModel({-0.5f,-0.5f,0.5f},{0.6f,0.6f},45.0f),
-  newModel({0.0f,-0.5f,0.5f},{0.6f,0.6f},33.0f),
-  rotate(radians(45.0f), vec3{0.0f, 0.0f, -1.0f})
+  newModel({0.0f,-0.5f,0.7f},{0.6f,0.6f},33.0f)
 };
 
 vector<int> texIdxs = {0,1,2,3,4,5,6,7,8,9,10,11};
@@ -133,8 +134,6 @@ GLuint fillTextures(const vector<Image>& images) {
     glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, xoff, yoff, i, size.x, size.y, 1, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)image.getPixelsPtr());
   }
 
-  // glBindTexture(GL_TEXTURE_2D_ARRAY, 0); //cleanup?
-
   cout << "Succesfully uploaded textures to target " + to_string(texture) << endl;
   
   return texture;
@@ -176,18 +175,9 @@ int main() {
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
   //glFrontFace(GL_CW);
-  
-  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-  /** // not really necessary
-  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-  glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-  glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
-  glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
-  */
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   
   vector<Image> images(12, Image());
 
@@ -196,6 +186,13 @@ int main() {
   }
   
   GLuint texture = fillTextures(images);
+
+  // texture MUST BE BOUND
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  //glTexParameterf(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_ANISOTROPY, 1.0f); // anisotropic filtering
 
   ifstream vFile;
   stringstream vStream;
