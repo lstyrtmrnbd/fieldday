@@ -123,8 +123,8 @@ GLuint fillTextures(const vector<Image>& images) {
     const auto& image = images[i];
     const auto size = image.getSize();
 
-    const unsigned int xoff = greatestWidth - size.x;
-    const unsigned int yoff = greatestHeight - size.y;
+    const unsigned int xoff = (greatestWidth - size.x) / 2;
+    const unsigned int yoff = (greatestHeight - size.y) / 2;
 
     cout << "uploading tex of size (" + to_string(size.x) + ", " + to_string(size.y) + ")"
          << " at offset (" + to_string(xoff) + ", " + to_string(yoff) + ")"
@@ -183,6 +183,7 @@ int main() {
 
   for(auto i = 0; i < 12; i++) {
     images[i].loadFromFile("assets/" + to_string(i) + ".png");
+    images[i].flipVertically(); // upside down pngs
   }
   
   GLuint texture = fillTextures(images);
