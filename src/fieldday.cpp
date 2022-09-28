@@ -194,7 +194,7 @@ int main() {
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   
-  for(auto _ : iota(1,13)) {
+  for(auto _ : iota(0,12)) {
     for(auto col : color) {
       colors.push_back(col);
     }
@@ -202,7 +202,7 @@ int main() {
   
   vector<Image> images(12, Image());
 
-  for(auto i = 0; i < 12; i++) {
+  for(auto i : iota(0,12)) {
     images[i].loadFromFile("assets/" + to_string(i) + ".png");
     images[i].flipVertically(); // upside down pngs
   }
@@ -215,7 +215,6 @@ int main() {
   glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   //glTexParameterf(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_ANISOTROPY, 1.0f); // anisotropic filtering 1-16
-
 
   const GLuint shader = compileShader(VERTFILE, FRAGFILE);
 
