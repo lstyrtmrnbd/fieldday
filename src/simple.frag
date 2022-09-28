@@ -6,6 +6,7 @@ uniform float threshold = 0.133;
 uniform sampler2DArray texs;
 
 in vec2 texCoordV;
+in vec4 colorsV;
 flat in int instanceId;
 flat in int texIndexV;
 
@@ -22,8 +23,7 @@ void main() {
   // else
   //   discard;
 
-  // fragColor = vec4(0.3 * texIndexV, texCoordV.t, texCoordV.s, 1.0);
   vec4 texColor = texture(texs, vec3(texCoordV, texIndexV));
-  fragColor = texColor;
-  // fragColor = vec4(0.3 * texIndexV, texCoordV, 1.0);
+  vec4 comboColor = mix(texColor, colorsV, vec4(vec3(0.5), 0.0));
+  fragColor = comboColor;
 }

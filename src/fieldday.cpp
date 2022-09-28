@@ -4,10 +4,9 @@
  */
 
 #include <iostream>
-#include <fstream>
-#include <sstream>
 #include <functional>
 #include <numeric>
+#include <ranges>
 #include <string>
 #include <vector>
 #include <ctime>
@@ -23,11 +22,15 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
 
+#include "shader.hpp"
+
 using namespace sf;
+
 using std::cout, std::endl, std::string, std::vector;
 using std::ifstream, std::stringstream;
-using std::to_string, std::transform_reduce;
-using glm::vec2, glm::vec3, glm::mat4;
+using std::to_string, std::transform_reduce, std::ranges::views::iota;
+
+using glm::vec2, glm::vec3, glm::vec4, glm::mat4;
 using glm::rotate, glm::scale, glm::translate;
 using glm::radians;
 
@@ -63,6 +66,18 @@ vector<mat4> models = {
 };
 
 vector<int> texIdxs = {0,1,2,3,4,5,6,7,8,9,10,11};
+
+vector<vec4> colors = {};
+
+vector<vec4> color = {
+  {0.f,1.f,0.f,1.f},
+  {1.f,0.f,0.f,1.f},
+  {0.f,0.f,1.f,1.f},
+
+  {0.f,0.f,1.f,1.f},
+  {1.f,1.f,0.f,1.f},
+  {0.f,1.f,0.f,1.f}
+};
 
 vector<vector<int>> stage = {
   {1,1,1,1,1},
@@ -179,6 +194,12 @@ int main() {
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   
+  for(auto _ : iota(1,13)) {
+    for(auto col : color) {
+      colors.push_back(col);
+    }
+  }
+  
   vector<Image> images(12, Image());
 
   for(auto i = 0; i < 12; i++) {
@@ -193,81 +214,20 @@ int main() {
   glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  //glTexParameterf(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_ANISOTROPY, 1.0f); // anisotropic filtering
-
-  ifstream vFile;
-  stringstream vStream;
-
-  vFile.open(VERTFILE);
-  vStream << vFile.rdbuf();
-  vFile.close();
-
-  string vertexCode = vStream.str();
-  const char* vShaderCode = vertexCode.c_str();
-
-  ifstream fFile;
-  stringstream fStream;
-
-  fFile.open(FRAGFILE);
-  fStream << fFile.rdbuf();
-  fFile.close();
-
-  string fragCode = fStream.str();
-  const char* fShaderCode = fragCode.c_str();
-  
-  GLuint vertex, fragment;
-  int success;
-  char infoLog[512];
-   
-  // vertex Shader
-  vertex = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertex, 1, &vShaderCode, NULL);
-  glCompileShader(vertex);
-  glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
-  
-  if(!success) {
-    glGetShaderInfoLog(vertex, 512, NULL, infoLog);
-    cout << "ERROR: Vertex shader compilation failed\n" << infoLog << endl;
-  }
-
-  // fragment Shader
-  fragment = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragment, 1, &fShaderCode, NULL);
-  glCompileShader(fragment);
-  glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
-  
-  if(!success) {
-    glGetShaderInfoLog(fragment, 512, NULL, infoLog);
-    cout << "ERROR: Fragment shader compilation failed\n" << infoLog << endl;
-  }
-
-  // shader Program
-  GLuint shader = glCreateProgram();
-  glAttachShader(shader, vertex);
-  glAttachShader(shader, fragment);
-  glLinkProgram(shader);
-  glGetProgramiv(shader, GL_LINK_STATUS, &success);
-  
-  if(!success) {
-    glGetProgramInfoLog(shader, 512, NULL, infoLog);
-    cout << "ERROR: Shader linking failed\n" << infoLog << endl;
-  }
-
-  // cleanup
-  glDeleteShader(vertex);
-  glDeleteShader(fragment);
-
-  glUseProgram(shader);
+  //glTexParameterf(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_ANISOTROPY, 1.0f); // anisotropic filtering 1-16
 
 
-  GLuint instanceVAO, billVBO, texcoordVBO, modelsVBO, texIdxVBO;
+  const GLuint shader = compileShader(VERTFILE, FRAGFILE);
+
+  GLuint instanceVAO, billVBO, texcoordVBO, modelsVBO, texIdxVBO, colorsVBO;
   glGenVertexArrays(1, &instanceVAO);
   
   glGenBuffers(1, &billVBO);
   glGenBuffers(1, &texcoordVBO);
   glGenBuffers(1, &modelsVBO);
   glGenBuffers(1, &texIdxVBO);
-  
+  glGenBuffers(1, &colorsVBO);
+
   glBindVertexArray(instanceVAO);
 
   GLint posLoc = glGetAttribLocation(shader, "position");
@@ -295,6 +255,16 @@ int main() {
   glBufferData(GL_ARRAY_BUFFER, sizeof(GLint) * texIdxs.size(), texIdxs.data(), GL_STATIC_DRAW);
   glVertexAttribIPointer(texIdxLoc, 1, GL_INT, 0, NULL);
   glVertexAttribDivisor(texIdxLoc, 1);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
+
+  GLint colorsLoc = glGetAttribLocation(shader, "colors");
+  const int colorsDim = 4; //vec4
+
+  glEnableVertexAttribArray(colorsLoc);
+  glBindBuffer(GL_ARRAY_BUFFER, colorsVBO);/////
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * colorsDim * colors.size(), colors.data(), GL_STATIC_DRAW);
+  glVertexAttribPointer(colorsLoc, colorsDim, GL_FLOAT, false, 0, NULL);
+  glVertexAttribDivisor(colorsLoc, 1);
   glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
   
   size_t mat4Stride = sizeof(GLfloat) * 4 * 4;
