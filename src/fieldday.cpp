@@ -73,10 +73,6 @@ vector<vec4> color = {
   {0.f,1.f,0.f,1.f},
   {1.f,0.f,0.f,1.f},
   {0.f,0.f,1.f,1.f},
-
-  {0.f,0.f,1.f,1.f},
-  {1.f,1.f,0.f,1.f},
-  {0.f,1.f,0.f,1.f}
 };
 
 vector<vector<int>> stage = {
@@ -194,7 +190,7 @@ int main() {
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   
-  for(auto _ : iota(0,12)) {
+  for(auto _ : iota(0,4)) {
     for(auto col : color) {
       colors.push_back(col);
     }
@@ -292,10 +288,17 @@ int main() {
   glBindVertexArray(0);
 
 
-  mat4 projection = glm::perspective(glm::radians(60.0f), 16.0f / 9.0f, 0.1f, 100.0f);
-  mat4 view = glm::lookAt(vec3{0.0f,0.0f,3.0f}, vec3{0.0f}, vec3{0.0f,1.0f,0.0f});
-  mat4 viewProjection = projection * view;
+  Vector2i center(window.getSize().x / 2, window.getSize().y / 2);
+  Mouse::setPosition(center, window);
   
+  vec3 myTarget = vec3{0.f};
+  vec3 myPosition = vec3{0.f,0.f,3.f};
+
+  mat4 projection = glm::perspective(glm::radians(60.0f), 16.0f / 9.0f, 0.1f, 100.0f);
+  mat4 view = glm::lookAt(myPosition, myTarget, vec3{0.0f,1.0f,0.0f});
+  mat4 viewProjection = projection * view;
+
+
   GLuint viewProjectionLoc = glGetUniformLocation(shader, "viewProjection");
   GLint texsLoc = glGetUniformLocation(shader, "texs");
 
@@ -318,6 +321,15 @@ int main() {
          (event.key.control && event.key.code == Keyboard::P))
         screenshot(window);
     }
+
+    Vector2i delta = Mouse::getPosition(window) - center;
+    Mouse::setPosition(center, window);
+
+    myTarget.x += delta.x * 0.01f;
+    myTarget.y -= delta.y * 0.01f;
+    
+    view = glm::lookAt(myPosition, myTarget, vec3{0.0f,1.0f,0.0f});
+    viewProjection = projection * view;
 
     
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
