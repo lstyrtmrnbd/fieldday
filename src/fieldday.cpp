@@ -303,6 +303,22 @@ int main() {
   GLint texsLoc = glGetUniformLocation(shader, "texs");
 
   cout << "Shader handle: " + to_string(shader) << endl;
+
+  struct move {
+    bool left {false};
+    bool right {false};
+    bool forward {false};
+    bool back {false};
+  };
+
+  auto mover = [](move m) -> vec3 {
+    const float speed = 0.1f;
+    const float horiz = m.left && m.right ? 0.f : m.left ? speed * -1.f : m.right ? speed : 0.f;
+    const float vert = m.forward && m.back ? 0.f : m.forward ? speed * -1.f : m.back ? speed : 0.f;
+    return vec3{horiz, 0.f, vert};
+  };
+
+  move moveMe;
   
   while (window.isOpen()) {
     
@@ -313,13 +329,40 @@ int main() {
       if (event.type == Event::Closed)
         window.close();
 
-      if (event.type == Event::KeyPressed &&
-          (event.key.code == Keyboard::Escape || event.key.code == Keyboard::Q))
-        window.close();
+      if(event.type == Event::KeyPressed) {
 
-      if(event.type == Event::KeyPressed &&
-         (event.key.control && event.key.code == Keyboard::P))
-        screenshot(window);
+        if(event.key.code == Keyboard::Escape || event.key.code == Keyboard::Q)
+          window.close();
+        
+        if(event.key.control && event.key.code == Keyboard::P)
+          screenshot(window);
+
+        if(event.key.code == Keyboard::A || event.key.code == Keyboard::Left)
+          moveMe.left = true;
+
+        if(event.key.code == Keyboard::D || event.key.code == Keyboard::Right)
+          moveMe.right = true;
+
+        if(event.key.code == Keyboard::W || event.key.code == Keyboard::Up)
+          moveMe.forward = true;
+
+        if(event.key.code == Keyboard::S || event.key.code == Keyboard::Down)
+          moveMe.back = true;
+      }
+
+      if(event.type == Event::KeyReleased) {
+        if(event.key.code == Keyboard::A || event.key.code == Keyboard::Left)
+          moveMe.left = false;
+
+        if(event.key.code == Keyboard::D || event.key.code == Keyboard::Right)
+          moveMe.right = false;
+
+        if(event.key.code == Keyboard::W || event.key.code == Keyboard::Up)
+          moveMe.forward = false;
+
+        if(event.key.code == Keyboard::S || event.key.code == Keyboard::Down)
+          moveMe.back = false;
+      }
     }
 
     Vector2i delta = Mouse::getPosition(window) - center;
@@ -327,6 +370,8 @@ int main() {
 
     myTarget.x += delta.x * 0.01f;
     myTarget.y -= delta.y * 0.01f;
+
+    myPosition += mover(moveMe);
     
     view = glm::lookAt(myPosition, myTarget, vec3{0.0f,1.0f,0.0f});
     viewProjection = projection * view;
