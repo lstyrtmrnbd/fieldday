@@ -371,7 +371,9 @@ int main() {
     myTarget.x += delta.x * 0.01f;
     myTarget.y -= delta.y * 0.01f;
 
-    myPosition += mover(moveMe);
+    vec3 movement = mover(moveMe);
+    myTarget += movement;
+    myPosition += movement;
     
     view = glm::lookAt(myPosition, myTarget, vec3{0.0f,1.0f,0.0f});
     viewProjection = projection * view;
