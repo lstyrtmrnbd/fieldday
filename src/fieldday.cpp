@@ -23,6 +23,7 @@
 #include <SFML/Window.hpp>
 
 #include "shader.hpp"
+#include "buffer.hpp"
 
 using namespace sf;
 
@@ -73,14 +74,6 @@ vector<vec4> color = {
   {0.f,1.f,0.f,1.f},
   {1.f,0.f,0.f,1.f},
   {0.f,0.f,1.f,1.f},
-};
-
-vector<vector<int>> stage = {
-  {1,1,1,1,1},
-  {1,0,0,0,1},
-  {1,0,0,0,1},
-  {1,0,0,0,1},
-  {1,1,1,1,1}
 };
 
 void screenshot(const RenderWindow& window) {
@@ -225,14 +218,10 @@ int main() {
 
   glBindVertexArray(instanceVAO);
 
-  GLint posLoc = glGetAttribLocation(shader, "position");
-  const int posDim = 3; //vec3
-  
+  GLint posLoc = glGetAttribLocation(shader, "position");  
   glEnableVertexAttribArray(posLoc);
-  glBindBuffer(GL_ARRAY_BUFFER, billVBO);///////
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * posDim * VERTS.size(), VERTS.data(), GL_STATIC_DRAW);
-  glVertexAttribPointer(posLoc, posDim, GL_FLOAT, false, 0, NULL);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
+
+  bufferVecs(posLoc, VERTS);
 
   GLint texcLoc = glGetAttribLocation(shader, "texCoord");
   const int texcDim = 2; //vec2
