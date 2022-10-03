@@ -220,36 +220,19 @@ int main() {
 
   GLint posLoc = glGetAttribLocation(shader, "position");  
   glEnableVertexAttribArray(posLoc);
+  bufferVecs(billVBO, posLoc, VERTS);
 
-  bufferVecs(posLoc, VERTS);
-
-  GLint texcLoc = glGetAttribLocation(shader, "texCoord");
-  const int texcDim = 2; //vec2
-  
+  GLint texcLoc = glGetAttribLocation(shader, "texCoord");  
   glEnableVertexAttribArray(texcLoc);
-  glBindBuffer(GL_ARRAY_BUFFER, texcoordVBO);///
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * texcDim * VTEXS.size(), VTEXS.data(), GL_STATIC_DRAW);
-  glVertexAttribPointer(texcLoc, texcDim, GL_FLOAT, false, 0, NULL);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
+  bufferVecs(texcoordVBO, texcLoc, VTEXS);
 
   GLint texIdxLoc = glGetAttribLocation(shader, "texIndex");
-  
   glEnableVertexAttribArray(texIdxLoc);
-  glBindBuffer(GL_ARRAY_BUFFER, texIdxVBO);/////
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLint) * texIdxs.size(), texIdxs.data(), GL_STATIC_DRAW);
-  glVertexAttribIPointer(texIdxLoc, 1, GL_INT, 0, NULL);
-  glVertexAttribDivisor(texIdxLoc, 1);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
+  bufferVecs(texIdxVBO, texIdxLoc, texIdxs, GL_STATIC_DRAW, 1);
 
   GLint colorsLoc = glGetAttribLocation(shader, "colors");
-  const int colorsDim = 4; //vec4
-
   glEnableVertexAttribArray(colorsLoc);
-  glBindBuffer(GL_ARRAY_BUFFER, colorsVBO);/////
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * colorsDim * colors.size(), colors.data(), GL_STATIC_DRAW);
-  glVertexAttribPointer(colorsLoc, colorsDim, GL_FLOAT, false, 0, NULL);
-  glVertexAttribDivisor(colorsLoc, 1);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
+  bufferVecs(colorsVBO, colorsLoc, colors, GL_STATIC_DRAW, 1);
   
   size_t mat4Stride = sizeof(GLfloat) * 4 * 4;
   
@@ -259,20 +242,7 @@ int main() {
   glEnableVertexAttribArray(modelsLoc + 2);
   glEnableVertexAttribArray(modelsLoc + 3);
 
-  glBindBuffer(GL_ARRAY_BUFFER, modelsVBO);/////
-  glBufferData(GL_ARRAY_BUFFER, mat4Stride * models.size(), models.data(), GL_STATIC_DRAW);
-  
-  glVertexAttribPointer(modelsLoc + 0, 4, GL_FLOAT, false, mat4Stride, (GLvoid*)0);
-  glVertexAttribPointer(modelsLoc + 1, 4, GL_FLOAT, false, mat4Stride, (GLvoid*)(sizeof(GLfloat) * 4));
-  glVertexAttribPointer(modelsLoc + 2, 4, GL_FLOAT, false, mat4Stride, (GLvoid*)(sizeof(GLfloat) * 8));
-  glVertexAttribPointer(modelsLoc + 3, 4, GL_FLOAT, false, mat4Stride, (GLvoid*)(sizeof(GLfloat) * 12));
-
-  glVertexAttribDivisor(modelsLoc + 0, 1);
-  glVertexAttribDivisor(modelsLoc + 1, 1);
-  glVertexAttribDivisor(modelsLoc + 2, 1);
-  glVertexAttribDivisor(modelsLoc + 3, 1);
-
-  glBindBuffer(GL_ARRAY_BUFFER, 0);/////////////
+  bufferMats(modelsVBO, modelsLoc, models, GL_STATIC_DRAW, 1);
   
   glBindVertexArray(0);
 
