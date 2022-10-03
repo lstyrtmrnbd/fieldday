@@ -233,19 +233,15 @@ int main() {
   GLint colorsLoc = glGetAttribLocation(shader, "colors");
   glEnableVertexAttribArray(colorsLoc);
   bufferVecs(colorsVBO, colorsLoc, colors, GL_STATIC_DRAW, 1);
-  
-  size_t mat4Stride = sizeof(GLfloat) * 4 * 4;
-  
+    
   GLint modelsLoc = glGetAttribLocation(shader, "model");
   glEnableVertexAttribArray(modelsLoc);
   glEnableVertexAttribArray(modelsLoc + 1);
   glEnableVertexAttribArray(modelsLoc + 2);
   glEnableVertexAttribArray(modelsLoc + 3);
-
   bufferMats(modelsVBO, modelsLoc, models, GL_STATIC_DRAW, 1);
   
   glBindVertexArray(0);
-
 
   Vector2i center(window.getSize().x / 2, window.getSize().y / 2);
   Mouse::setPosition(center, window);

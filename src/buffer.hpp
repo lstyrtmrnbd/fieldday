@@ -59,7 +59,7 @@ void bufferMats(unsigned int vbo, unsigned int location, const vector<T>& buffer
   const size_t stride = size * col_dim * row_dim;
   
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, stride * bufferMe.size(), bufferMe.data(), GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, stride * bufferMe.size(), bufferMe.data(), hint);
 
   for(auto i = 0; i < col_dim; i++) {
     // row_dim vs col_dim used correctly? doesnt matter for mat4x4... 
