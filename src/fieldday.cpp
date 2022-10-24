@@ -27,8 +27,9 @@
 
 using namespace sf;
 
-using std::cout, std::endl, std::string, std::vector;
+using std::cout, std::endl;
 using std::ifstream, std::stringstream;
+using std::string, std::vector, std::function;
 using std::to_string, std::transform_reduce, std::ranges::views::iota;
 
 using glm::vec2, glm::vec3, glm::vec4, glm::mat4;
@@ -68,13 +69,21 @@ vector<mat4> models = {
 
 vector<int> texIdxs = {0,1,2,3,4,5,6,7,8,9,10,11};
 
-vector<vec4> colors = {};
-
-vector<vec4> color = {
+vector<vec4> colors = {
   {0.f,1.f,0.f,1.f},
   {1.f,0.f,0.f,1.f},
   {0.f,0.f,1.f,1.f},
 };
+
+
+struct model {
+  int texIdx;
+  vec3 position;
+  vec2 size;
+  float angle;
+};
+
+// vector<function<model, model>> modelers
 
 void screenshot(const RenderWindow& window) {
 
@@ -182,16 +191,12 @@ int main() {
 
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  
-  for(auto _ : iota(0,4)) {
-    for(auto col : color) {
-      colors.push_back(col);
-    }
-  }
-  
-  vector<Image> images(12, Image());
 
-  for(auto i : iota(0,12)) {
+  const int assetCount = 12;
+  
+  vector<Image> images(assetCount, Image());
+
+  for(auto i : iota(0,assetCount)) {
     images[i].loadFromFile("assets/" + to_string(i) + ".png");
     images[i].flipVertically(); // upside down pngs
   }
@@ -266,7 +271,7 @@ int main() {
     bool back {false};
   };
 
-  auto mover = [](move m) -> vec3 {
+  auto mover = [](move& m) -> vec3 {
     const float speed = 0.1f;
     const float horiz = m.left && m.right ? 0.f : m.left ? speed * -1.f : m.right ? speed : 0.f;
     const float vert = m.forward && m.back ? 0.f : m.forward ? speed * -1.f : m.back ? speed : 0.f;
@@ -329,8 +334,10 @@ int main() {
     vec3 movement = mover(moveMe);
     myTarget += movement;
     myPosition += movement;
+
+    vec3 up = vec3{0.0f,1.0f,0.0f};
     
-    view = glm::lookAt(myPosition, myTarget, vec3{0.0f,1.0f,0.0f});
+    view = glm::lookAt(myPosition, myTarget, up);
     viewProjection = projection * view;
 
     
